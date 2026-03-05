@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    container_name: pystorageops-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config:/app/config:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    networks:
+      - storage-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: pystorageops-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+    networks:
+      - storage-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: pystorageops-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - storage-net
+
+networks:
+  storage-net:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:
