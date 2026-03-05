@@ -1,0 +1,82 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "PyStorageOps Dashboard",
+    "tags": ["storage", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Total Storage Capacity",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "storage_capacity_bytes_total",
+            "legendFormat": "Total Capacity"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {"unit": "bytes"}
+        }
+      },
+      {
+        "id": 2,
+        "title": "Used Storage",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+        "targets": [
+          {
+            "expr": "storage_used_bytes_total",
+            "legendFormat": "Used"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {"unit": "bytes"}
+        }
+      },
+      {
+        "id": 3,
+        "title": "Volume Count",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "storage_volumes_total",
+            "legendFormat": "Volumes"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "I/O Operations (Read vs Write)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "rate(storage_reads_total[5m])",
+            "legendFormat": "Reads/s"
+          },
+          {
+            "expr": "rate(storage_writes_total[5m])",
+            "legendFormat": "Writes/s"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Storage Utilization per Volume",
+        "type": "bargauge",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "storage_volume_used_blocks",
+            "legendFormat": "{{volume}}"
+          }
+        ]
+      }
+    ],
+    "time": {"from": "now-1h", "to": "now"},
+    "refresh": "10s"
+  }
+}
