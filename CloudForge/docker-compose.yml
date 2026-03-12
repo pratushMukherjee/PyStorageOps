@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: cloudforge-api
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    restart: unless-stopped
+    networks:
+      - cloudforge-net
+
+  ai:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai
+    container_name: cloudforge-ai
+    ports:
+      - "8081:8081"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    restart: unless-stopped
+    networks:
+      - cloudforge-net
+
+  proxy:
+    image: nginx:alpine
+    container_name: cloudforge-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./dashboard:/usr/share/nginx/html:ro
+    depends_on:
+      - api
+      - ai
+    restart: unless-stopped
+    networks:
+      - cloudforge-net
+
+networks:
+  cloudforge-net:
+    driver: bridge

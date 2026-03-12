@@ -1,0 +1,107 @@
+// CloudForge CI/CD Pipeline — Jenkins Declarative Pipeline
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_REGISTRY = 'cloudforge'
+        GO_VERSION = '1.21'
+        PYTHON_VERSION = '3.11'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Lint') {
+            parallel {
+                stage('Lint Go') {
+                    steps {
+                        dir('server') {
+                            sh 'go vet ./...'
+                        }
+                    }
+                }
+                stage('Lint Python') {
+                    steps {
+                        sh 'pip install ruff && ruff check ai-service/ buildpacks/ cli/ tests/'
+                    }
+                }
+            }
+        }
+
+        stage('Test') {
+            parallel {
+                stage('Test Go') {
+                    steps {
+                        dir('server') {
+                            sh 'go test ./... -v -cover'
+                        }
+                    }
+                }
+                stage('Test Python') {
+                    steps {
+                        sh '''
+                            pip install -r ai-service/requirements.txt
+                            pip install pytest httpx
+                            python -m pytest tests/ -v --tb=short
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            parallel {
+                stage('Build API Server') {
+                    steps {
+                        sh 'docker build -f Dockerfile.server -t ${DOCKER_REGISTRY}/api:${BUILD_NUMBER} .'
+                    }
+                }
+                stage('Build AI Service') {
+                    steps {
+                        sh 'docker build -f Dockerfile.ai -t ${DOCKER_REGISTRY}/ai:${BUILD_NUMBER} .'
+                    }
+                }
+            }
+        }
+
+        stage('Integration Test') {
+            steps {
+                sh '''
+                    docker-compose up -d
+                    sleep 5
+                    curl -f http://localhost:8080/health || exit 1
+                    curl -f http://localhost:8081/health || exit 1
+                    docker-compose down
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                sh '''
+                    docker-compose up -d --build
+                    echo "Deployment complete"
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker-compose down 2>/dev/null || true'
+        }
+        success {
+            echo 'Pipeline completed successfully'
+        }
+        failure {
+            echo 'Pipeline failed — check logs'
+        }
+    }
+}
